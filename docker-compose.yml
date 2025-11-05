@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: beautibuk-agent-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=beautibuk_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - beautibuk-network
+
+  # Rust Agent
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: beautibuk-agent
+    environment:
+      # MCP Server
+      - MCP_SERVER_URL=http://mcp-server:8002
+      - MCP_TRANSPORT=http
+      
+      # LLM Provider
+      - LLM_PROVIDER=${LLM_PROVIDER:-groq}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-llama-3.1-8b-instant}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2000}
+      
+      # Embeddings
+      - EMBEDDING_PROVIDER=google
+      - EMBEDDING_MODEL=text-embedding-004
+      
+      # Database
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/beautibuk_agent
+      
+      # Server
+      - AGENT_PORT=3000
+      - SESSION_TIMEOUT_MINUTES=30
+      - LOG_LEVEL=info
+      
+      # CORS
+      - ALLOWED_ORIGINS=http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mcp-server:
+        condition: service_started
+    networks:
+      - beautibuk-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # MCP Server (Python backend)
+  mcp-server:
+    # Assuming you have a Dockerfile for the Python backend
+    # If not, you can build from the beautibuk-back directory
+    build:
+      context: ../beautibuk-back
+      dockerfile: Dockerfile
+    container_name: beautibuk-mcp-server
+    environment:
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017}
+      - DATABASE_NAME=${DATABASE_NAME:-beautibuk}
+      - MCP_ENABLED=true
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8002
+      - MCP_TRANSPORT=http
+    ports:
+      - "8002:8002"
+    command: python run_mcp.py http
+    networks:
+      - beautibuk-network
+    restart: unless-stopped
+
+  # MongoDB (if needed by MCP server)
+  mongodb:
+    image: mongo:7
+    container_name: beautibuk-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=beautibuk
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - beautibuk-network
+    restart: unless-stopped
+
+networks:
+  beautibuk-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
