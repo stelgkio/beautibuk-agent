@@ -321,6 +321,7 @@ impl LlmClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         match self.provider {
             LlmProvider::Google => self.generate_google_embedding(text).await,
@@ -330,6 +331,7 @@ impl LlmClient {
         }
     }
 
+    #[allow(dead_code)]
     async fn generate_google_embedding(&self, text: &str) -> Result<Vec<f32>> {
         let request = json!({
             "model": "text-embedding-004",

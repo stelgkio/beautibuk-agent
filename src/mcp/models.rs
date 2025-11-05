@@ -10,7 +10,9 @@ pub struct McpRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct McpResponse {
+    #[allow(dead_code)]
     pub jsonrpc: String,
+    #[allow(dead_code)]
     pub id: u64,
     pub result: Option<McpResult>,
     pub error: Option<McpError>,
@@ -33,13 +35,16 @@ pub struct McpTool {
 #[derive(Debug, Deserialize)]
 pub struct McpContent {
     #[serde(rename = "type")]
+    #[allow(dead_code)]
     pub content_type: String,
     pub text: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct McpError {
+    #[allow(dead_code)]
     pub code: i32,
     pub message: String,
+    #[allow(dead_code)]
     pub data: Option<serde_json::Value>,
 }

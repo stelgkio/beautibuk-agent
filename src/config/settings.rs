@@ -16,6 +16,7 @@ pub enum EmbeddingProvider {
 pub struct Settings {
     // MCP Server
     pub mcp_server_url: String,
+    #[allow(dead_code)]
     pub mcp_transport: String,
 
     // LLM
@@ -35,10 +36,13 @@ pub struct Settings {
 
     // Server
     pub agent_port: u16,
+    #[allow(dead_code)]
     pub session_timeout_minutes: u64,
+    #[allow(dead_code)]
     pub log_level: String,
 
     // CORS
+    #[allow(dead_code)]
     pub allowed_origins: Vec<String>,
 }
 
