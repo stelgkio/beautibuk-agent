@@ -1,7 +1,7 @@
 # Multi-stage build for Rust agent
 
 # Stage 1: Build
-FROM rust:1.75-slim AS builder
+FROM rust:latest AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,21 +13,21 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first for better caching
+# Copy Cargo files
 COPY Cargo.toml Cargo.lock* ./
 
-# Create a dummy main.rs to build dependencies
+# Create a dummy main.rs to build dependencies first (for caching)
 RUN mkdir -p src && \
     echo "fn main() {}" > src/main.rs
 
-# Build dependencies (this layer will be cached if Cargo.toml doesn't change)
-RUN cargo build --release && \
-    rm -rf src
+# Build dependencies (this layer will be cached)
+RUN cargo build --release || true
 
-# Copy source code
-COPY . .
+# Copy actual source code
+COPY src ./src
+COPY migrations ./migrations
 
-# Build the application (this will use the cached dependencies)
+# Build the application
 RUN cargo build --release
 
 # Stage 2: Runtime
