@@ -8,10 +8,9 @@ mod session;
 mod vector;
 
 use anyhow::Result;
-use axum::Router;
 use tracing::info;
 
-use config::Settings;
+use config::{Settings, LlmProvider, EmbeddingProvider};
 use database::get_pool;
 
 #[tokio::main]
@@ -50,8 +49,8 @@ async fn main() -> Result<()> {
 
     // Initialize LLM client
     let llm_provider = match settings.llm_provider {
-        config::LlmProvider::Groq => agent::llm::LlmProvider::Groq,
-        config::LlmProvider::Google => agent::llm::LlmProvider::Google,
+        LlmProvider::Groq => agent::llm::LlmProvider::Groq,
+        LlmProvider::Google => agent::llm::LlmProvider::Google,
     };
 
     let llm_client = agent::llm::LlmClient::new(
@@ -64,7 +63,7 @@ async fn main() -> Result<()> {
 
     // Initialize embedding service
     let embedding_provider = match settings.embedding_provider {
-        config::EmbeddingProvider::Google => agent::embeddings::EmbeddingProvider::Google,
+        EmbeddingProvider::Google => agent::embeddings::EmbeddingProvider::Google,
     };
 
     let embedding_service = agent::embeddings::EmbeddingService::new(

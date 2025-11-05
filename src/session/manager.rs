@@ -1,6 +1,5 @@
 use crate::models::{ChatMessage, ConversationContext};
 use anyhow::Result;
-use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -16,7 +15,7 @@ impl SessionManager {
     pub async fn get_or_create_session(&self, session_id: &str) -> Result<ConversationContext> {
         let session_uuid = Uuid::parse_str(session_id).unwrap_or_else(|_| Uuid::new_v4());
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, (String, serde_json::Value)>(
             r#"
             SELECT 
                 session_id::text as session_id,
@@ -26,15 +25,15 @@ impl SessionManager {
             ORDER BY created_at DESC
             LIMIT 1
             "#,
-            session_uuid
         )
+        .bind(session_uuid)
         .fetch_optional(&self.pool)
         .await?;
 
-        if let Some(row) = row {
-            let messages: Vec<ChatMessage> = serde_json::from_value(row.messages)?;
+        if let Some((session_id_text, messages_json)) = row {
+            let messages: Vec<ChatMessage> = serde_json::from_value(messages_json)?;
             Ok(ConversationContext {
-                session_id: row.session_id,
+                session_id: session_id_text,
                 messages,
             })
         } else {
@@ -66,15 +65,14 @@ impl SessionManager {
 
         let messages_json = serde_json::to_value(&context.messages)?;
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO conversations (session_id, messages, updated_at)
-            VALUES ($1, $2, $3)
+            VALUES ($1, $2, NOW())
             "#,
-            session_uuid,
-            messages_json,
-            Utc::now()
         )
+        .bind(session_uuid)
+        .bind(messages_json)
         .execute(&self.pool)
         .await?;
 

@@ -1,10 +1,9 @@
 use crate::agent::{EmbeddingService, LlmClient};
 use crate::mcp::McpClient;
-use crate::models::{ChatMessage, ChatResponse, ConversationContext};
+use crate::models::{ChatMessage, ChatResponse};
 use crate::session::SessionManager;
 use crate::vector::VectorService;
 use anyhow::Result;
-use uuid::Uuid;
 
 pub struct Orchestrator {
     llm_client: LlmClient,

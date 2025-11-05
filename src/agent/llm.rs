@@ -2,7 +2,7 @@ use crate::mcp::{McpClient, McpTool};
 use crate::models::ChatMessage;
 use anyhow::{anyhow, Result};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 
 #[derive(Debug, Clone)]

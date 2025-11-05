@@ -16,8 +16,6 @@ impl VectorService {
         message_text: &str,
         embedding: &[f32],
     ) -> Result<()> {
-        use sqlx::Row;
-
         // Convert f32 slice to pgvector format
         let embedding_str = format!(
             "[{}]",
@@ -28,7 +26,7 @@ impl VectorService {
                 .join(",")
         );
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO conversation_embeddings (conversation_id, message_text, embedding)
             VALUES (
@@ -37,10 +35,10 @@ impl VectorService {
                 $3::vector
             )
             "#,
-            conversation_id,
-            message_text,
-            embedding_str
         )
+        .bind(conversation_id)
+        .bind(message_text)
+        .bind(embedding_str)
         .execute(&self.pool)
         .await?;
 
@@ -61,7 +59,7 @@ impl VectorService {
                 .join(",")
         );
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, (String, f64)>(
             r#"
             SELECT message_text, 
                    1 - (embedding <=> $1::vector) as similarity
@@ -69,12 +67,12 @@ impl VectorService {
             ORDER BY embedding <=> $1::vector
             LIMIT $2
             "#,
-            embedding_str,
-            limit as i64
         )
+        .bind(embedding_str)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter().map(|r| r.message_text).collect())
+        Ok(rows.into_iter().map(|(text, _)| text).collect())
     }
 }
