@@ -43,10 +43,7 @@ impl Orchestrator {
             .await?;
 
         // 2. Optional: RAG for context enhancement
-        let embedding = self
-            .embedding_service
-            .generate_embedding(&message)
-            .await?;
+        let embedding = self.embedding_service.generate_embedding(&message).await?;
         let similar_context = self
             .vector_service
             .retrieve_context_for_rag(&embedding, 5)
@@ -95,4 +92,3 @@ impl Orchestrator {
         })
     }
 }
-

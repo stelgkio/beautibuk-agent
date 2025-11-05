@@ -7,4 +7,3 @@ use axum::Router;
 pub fn create_router(orchestrator: Orchestrator) -> Router {
     routes::create_routes(orchestrator)
 }
-

@@ -19,4 +19,3 @@ impl ConversationContext {
         self.messages.push(message);
     }
 }
-

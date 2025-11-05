@@ -43,4 +43,3 @@ pub struct McpError {
     pub message: String,
     pub data: Option<serde_json::Value>,
 }
-

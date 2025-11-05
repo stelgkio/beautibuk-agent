@@ -1,6 +1,6 @@
 use crate::mcp::{McpClient, McpTool};
 use crate::models::ChatMessage;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -52,10 +52,12 @@ impl LlmClient {
         // 3. Send to LLM with function calling
         match self.provider {
             LlmProvider::Groq => {
-                self.call_groq_with_functions(messages, &functions, mcp_client).await
+                self.call_groq_with_functions(messages, &functions, mcp_client)
+                    .await
             }
             LlmProvider::Google => {
-                self.call_google_with_functions(messages, &functions, mcp_client).await
+                self.call_google_with_functions(messages, &functions, mcp_client)
+                    .await
             }
         }
     }
@@ -152,21 +154,27 @@ impl LlmClient {
                     current_messages.push(ChatMessage {
                         role: "assistant".to_string(),
                         content: message.content.clone().unwrap_or_default(),
-                        tool_calls: Some(tool_calls.iter().map(|tc| crate::models::ToolCall {
-                            id: tc.id.clone(),
-                            r#type: tc.r#type.clone(),
-                            function: crate::models::FunctionCall {
-                                name: tc.function.name.clone(),
-                                arguments: serde_json::from_str(&tc.function.arguments).unwrap_or_default(),
-                            },
-                        }).collect()),
+                        tool_calls: Some(
+                            tool_calls
+                                .iter()
+                                .map(|tc| crate::models::ToolCall {
+                                    id: tc.id.clone(),
+                                    r#type: tc.r#type.clone(),
+                                    function: crate::models::FunctionCall {
+                                        name: tc.function.name.clone(),
+                                        arguments: serde_json::from_str(&tc.function.arguments)
+                                            .unwrap_or_default(),
+                                    },
+                                })
+                                .collect(),
+                        ),
                     });
 
                     // Execute each tool call
                     for tool_call in tool_calls {
-                        let arguments: serde_json::Value = serde_json::from_str(&tool_call.function.arguments)
-                            .unwrap_or_default();
-                        
+                        let arguments: serde_json::Value =
+                            serde_json::from_str(&tool_call.function.arguments).unwrap_or_default();
+
                         let tool_result = mcp_client
                             .call_tool(&tool_call.function.name, &arguments)
                             .await?;
@@ -195,18 +203,21 @@ impl LlmClient {
         mcp_client: &McpClient,
     ) -> Result<String> {
         // Convert messages to Gemini format
-        let mut contents: Vec<serde_json::Value> = messages.iter().map(|m| {
-            let role = match m.role.as_str() {
-                "user" => "user",
-                "assistant" => "model",
-                "tool" => "function",
-                _ => "user",
-            };
-            json!({
-                "role": role,
-                "parts": [{"text": m.content}]
+        let mut contents: Vec<serde_json::Value> = messages
+            .iter()
+            .map(|m| {
+                let role = match m.role.as_str() {
+                    "user" => "user",
+                    "assistant" => "model",
+                    "tool" => "function",
+                    _ => "user",
+                };
+                json!({
+                    "role": role,
+                    "parts": [{"text": m.content}]
+                })
             })
-        }).collect();
+            .collect();
 
         // Convert functions to Gemini format
         let function_declarations: Vec<serde_json::Value> = functions
@@ -272,9 +283,7 @@ impl LlmClient {
                         let func_name = function_call["name"].as_str().unwrap();
                         let func_args = &function_call["args"];
 
-                        let tool_result = mcp_client
-                            .call_tool(func_name, func_args)
-                            .await?;
+                        let tool_result = mcp_client.call_tool(func_name, func_args).await?;
 
                         // Add model response with function call
                         contents.push(json!({
@@ -315,9 +324,9 @@ impl LlmClient {
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         match self.provider {
             LlmProvider::Google => self.generate_google_embedding(text).await,
-            LlmProvider::Groq => {
-                Err(anyhow!("Groq does not support embeddings. Use Google AI Studio for embeddings."))
-            }
+            LlmProvider::Groq => Err(anyhow!(
+                "Groq does not support embeddings. Use Google AI Studio for embeddings."
+            )),
         }
     }
 
@@ -334,12 +343,7 @@ impl LlmClient {
             self.api_key
         );
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&request)
-            .send()
-            .await?;
+        let response = self.client.post(&url).json(&request).send().await?;
 
         if !response.status().is_success() {
             let error_text = response.text().await?;

@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use std::env;
 
 #[derive(Debug, Clone)]
@@ -11,7 +11,6 @@ pub enum LlmProvider {
 pub enum EmbeddingProvider {
     Google,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Settings {
@@ -93,8 +92,7 @@ impl Settings {
         Ok(Settings {
             mcp_server_url: env::var("MCP_SERVER_URL")
                 .unwrap_or_else(|_| "http://localhost:8002".to_string()),
-            mcp_transport: env::var("MCP_TRANSPORT")
-                .unwrap_or_else(|_| "http".to_string()),
+            mcp_transport: env::var("MCP_TRANSPORT").unwrap_or_else(|_| "http".to_string()),
             llm_provider,
             llm_api_key,
             llm_model: env::var("LLM_MODEL").unwrap_or(default_llm_model),
@@ -110,8 +108,9 @@ impl Settings {
             embedding_api_key,
             embedding_model: env::var("EMBEDDING_MODEL")
                 .unwrap_or_else(|_| "text-embedding-004".to_string()),
-            database_url: env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgresql://user:password@localhost:5432/beautibuk_agent".to_string()),
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgresql://user:password@localhost:5432/beautibuk_agent".to_string()
+            }),
             agent_port: env::var("AGENT_PORT")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -125,4 +124,3 @@ impl Settings {
         })
     }
 }
-

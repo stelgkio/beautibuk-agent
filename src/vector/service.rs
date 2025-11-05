@@ -17,12 +17,16 @@ impl VectorService {
         embedding: &[f32],
     ) -> Result<()> {
         use sqlx::Row;
-        
+
         // Convert f32 slice to pgvector format
-        let embedding_str = format!("[{}]", embedding.iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(","));
+        let embedding_str = format!(
+            "[{}]",
+            embedding
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
 
         sqlx::query!(
             r#"
@@ -48,10 +52,14 @@ impl VectorService {
         query_embedding: &[f32],
         limit: usize,
     ) -> Result<Vec<String>> {
-        let embedding_str = format!("[{}]", query_embedding.iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>()
-            .join(","));
+        let embedding_str = format!(
+            "[{}]",
+            query_embedding
+                .iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
 
         let rows = sqlx::query!(
             r#"
@@ -67,9 +75,6 @@ impl VectorService {
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(rows.into_iter()
-            .map(|r| r.message_text)
-            .collect())
+        Ok(rows.into_iter().map(|r| r.message_text).collect())
     }
 }
-

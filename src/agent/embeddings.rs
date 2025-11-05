@@ -48,7 +48,10 @@ impl EmbeddingService {
 
         if !response.status().is_success() {
             let error_text = response.text().await?;
-            return Err(anyhow::anyhow!("Google Embeddings API error: {}", error_text));
+            return Err(anyhow::anyhow!(
+                "Google Embeddings API error: {}",
+                error_text
+            ));
         }
 
         #[derive(Deserialize)]
@@ -65,4 +68,3 @@ impl EmbeddingService {
         Ok(result.embedding.values)
     }
 }
-

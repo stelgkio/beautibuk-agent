@@ -1,5 +1,5 @@
 use crate::mcp::models::*;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use serde_json::json;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -39,10 +39,7 @@ impl McpClient {
             .await?;
 
         if response.error.is_some() {
-            return Err(anyhow!(
-                "MCP initialization failed: {:?}",
-                response.error
-            ));
+            return Err(anyhow!("MCP initialization failed: {:?}", response.error));
         }
 
         Ok(())
@@ -64,11 +61,7 @@ impl McpClient {
         Err(anyhow!("No tools in MCP response"))
     }
 
-    pub async fn call_tool(
-        &self,
-        name: &str,
-        arguments: &serde_json::Value,
-    ) -> Result<String> {
+    pub async fn call_tool(&self, name: &str, arguments: &serde_json::Value) -> Result<String> {
         let response = self
             .send_request(
                 "tools/call",
@@ -94,11 +87,7 @@ impl McpClient {
         Err(anyhow!("No content in MCP tool response"))
     }
 
-    async fn send_request(
-        &self,
-        method: &str,
-        params: serde_json::Value,
-    ) -> Result<McpResponse> {
+    async fn send_request(&self, method: &str, params: serde_json::Value) -> Result<McpResponse> {
         let request = McpRequest {
             jsonrpc: "2.0".to_string(),
             id: self.next_id(),
@@ -122,4 +111,3 @@ impl McpClient {
         Ok(mcp_response)
     }
 }
-

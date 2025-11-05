@@ -33,4 +33,3 @@ pub struct ChatResponse {
     pub response: String,
     pub session_id: String,
 }
-

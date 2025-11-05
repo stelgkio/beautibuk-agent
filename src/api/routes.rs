@@ -12,4 +12,3 @@ pub fn create_routes(orchestrator: Orchestrator) -> Router {
         .layer(CorsLayer::permissive())
         .with_state(Arc::new(orchestrator))
 }
-

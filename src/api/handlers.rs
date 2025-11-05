@@ -13,7 +13,9 @@ pub async fn handle_chat(
     State(orchestrator): State<Arc<Orchestrator>>,
     Json(request): Json<ChatRequest>,
 ) -> Result<Json<ChatResponse>, (StatusCode, Json<serde_json::Value>)> {
-    let session_id = request.session_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+    let session_id = request
+        .session_id
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
 
     match orchestrator
         .process_message(request.message, session_id.clone())
@@ -32,4 +34,3 @@ pub async fn handle_chat(
         }
     }
 }
-

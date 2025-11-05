@@ -14,8 +14,7 @@ impl SessionManager {
     }
 
     pub async fn get_or_create_session(&self, session_id: &str) -> Result<ConversationContext> {
-        let session_uuid = Uuid::parse_str(session_id)
-            .unwrap_or_else(|_| Uuid::new_v4());
+        let session_uuid = Uuid::parse_str(session_id).unwrap_or_else(|_| Uuid::new_v4());
 
         let row = sqlx::query!(
             r#"
@@ -49,17 +48,16 @@ impl SessionManager {
         user_message: &str,
         assistant_message: &str,
     ) -> Result<()> {
-        let session_uuid = Uuid::parse_str(session_id)
-            .unwrap_or_else(|_| Uuid::new_v4());
+        let session_uuid = Uuid::parse_str(session_id).unwrap_or_else(|_| Uuid::new_v4());
 
         let mut context = self.get_or_create_session(session_id).await?;
-        
+
         context.add_message(ChatMessage {
             role: "user".to_string(),
             content: user_message.to_string(),
             tool_calls: None,
         });
-        
+
         context.add_message(ChatMessage {
             role: "assistant".to_string(),
             content: assistant_message.to_string(),
@@ -83,4 +81,3 @@ impl SessionManager {
         Ok(())
     }
 }
-

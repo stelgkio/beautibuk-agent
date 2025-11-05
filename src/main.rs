@@ -38,14 +38,12 @@ async fn main() -> Result<()> {
     info!("Database connection established");
 
     // Run migrations
-    sqlx::migrate!("./migrations")
-        .run(&db_pool)
-        .await?;
+    sqlx::migrate!("./migrations").run(&db_pool).await?;
     info!("Database migrations completed");
 
     // Initialize services
     let mcp_client = mcp::McpClient::new(settings.mcp_server_url.clone());
-    
+
     // Initialize MCP connection
     mcp_client.initialize().await?;
     info!("MCP client initialized");
@@ -55,7 +53,7 @@ async fn main() -> Result<()> {
         config::LlmProvider::Groq => agent::llm::LlmProvider::Groq,
         config::LlmProvider::Google => agent::llm::LlmProvider::Google,
     };
-    
+
     let llm_client = agent::llm::LlmClient::new(
         llm_provider,
         settings.llm_api_key.clone(),
@@ -68,7 +66,7 @@ async fn main() -> Result<()> {
     let embedding_provider = match settings.embedding_provider {
         config::EmbeddingProvider::Google => agent::embeddings::EmbeddingProvider::Google,
     };
-    
+
     let embedding_service = agent::embeddings::EmbeddingService::new(
         embedding_provider,
         settings.embedding_api_key.clone(),
@@ -94,12 +92,11 @@ async fn main() -> Result<()> {
     let app = api::create_router(orchestrator);
 
     // Start server
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings.agent_port))
-        .await?;
+    let listener =
+        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings.agent_port)).await?;
     info!("Server listening on port {}", settings.agent_port);
 
     axum::serve(listener, app).await?;
 
     Ok(())
 }
-
