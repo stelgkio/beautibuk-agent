@@ -1,3 +1,3 @@
 pub mod settings;
 
-pub use settings::{Settings, LlmProvider, EmbeddingProvider};
+pub use settings::{EmbeddingProvider, LlmProvider, Settings};

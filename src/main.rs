@@ -10,7 +10,7 @@ mod vector;
 use anyhow::Result;
 use tracing::info;
 
-use config::{Settings, LlmProvider, EmbeddingProvider};
+use config::{EmbeddingProvider, LlmProvider, Settings};
 use database::get_pool;
 
 #[tokio::main]
