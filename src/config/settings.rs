@@ -5,6 +5,7 @@ use std::env;
 pub enum LlmProvider {
     Groq,
     Google,
+    DeepSeek,
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +56,7 @@ impl Settings {
         {
             "google" => LlmProvider::Google,
             "groq" => LlmProvider::Groq,
+            "deepseek" => LlmProvider::DeepSeek,
             _ => LlmProvider::Groq,
         };
 
@@ -65,6 +67,9 @@ impl Settings {
             LlmProvider::Groq => env::var("GROQ_API_KEY")
                 .or_else(|_| env::var("GROQ_KEY"))
                 .map_err(|_| anyhow!("GROQ_API_KEY not set"))?,
+            LlmProvider::DeepSeek => env::var("DEEPSEEK_API_KEY")
+                .or_else(|_| env::var("DEEPSEEK_KEY"))
+                .map_err(|_| anyhow!("DEEPSEEK_API_KEY not set"))?,
         };
 
         let embedding_provider = match env::var("EMBEDDING_PROVIDER")
@@ -85,6 +90,7 @@ impl Settings {
         let default_llm_model = match llm_provider {
             LlmProvider::Groq => "llama-3.1-8b-instant".to_string(),
             LlmProvider::Google => "gemini-2.0-flash-exp".to_string(),
+            LlmProvider::DeepSeek => "deepseek-chat".to_string(),
         };
 
         let allowed_origins = env::var("ALLOWED_ORIGINS")

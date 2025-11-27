@@ -55,12 +55,14 @@ impl SessionManager {
             role: "user".to_string(),
             content: user_message.to_string(),
             tool_calls: None,
+            tool_call_id: None,
         });
 
         context.add_message(ChatMessage {
             role: "assistant".to_string(),
             content: assistant_message.to_string(),
             tool_calls: None,
+            tool_call_id: None,
         });
 
         let messages_json = serde_json::to_value(&context.messages)?;

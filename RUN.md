@@ -26,12 +26,15 @@ curl http://localhost:8002/
 
 ### 2. Configure Environment Variables
 
-Edit `.env` file and add your API keys:
+Edit `.env` file and add your API keys and provider selection:
 
 ```bash
 # Required: Add your actual API keys
+LLM_PROVIDER=groq              # groq | google | deepseek
+LLM_MODEL=llama-3.1-8b-instant # e.g., deepseek-chat when using DeepSeek
 GROQ_API_KEY=gsk_your_actual_key_here
 GOOGLE_AI_API_KEY=your_actual_google_key_here
+DEEPSEEK_API_KEY=ds_your_actual_key_here
 
 # Update database URL if needed
 DATABASE_URL=postgresql://user:password@localhost:5432/beautibuk_agent
@@ -176,9 +179,10 @@ curl -X POST http://localhost:3000/api/chat \
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MCP_SERVER_URL` | MCP server address | `http://localhost:8002` |
-| `LLM_PROVIDER` | LLM provider (groq/google) | `groq` |
+| `LLM_PROVIDER` | LLM provider (groq/google/deepseek) | `groq` |
 | `GROQ_API_KEY` | Groq API key | `gsk_...` |
 | `GOOGLE_AI_API_KEY` | Google AI API key | `AIzaSy...` |
+| `DEEPSEEK_API_KEY` | DeepSeek API key | `ds_...` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` |
 | `AGENT_PORT` | Server port | `3000` |
 

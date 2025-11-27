@@ -60,6 +60,7 @@ impl Orchestrator {
                         similar_context.join("\n")
                     ),
                     tool_calls: None,
+                    tool_call_id: None,
                 },
             );
         }
@@ -67,6 +68,7 @@ impl Orchestrator {
             role: "user".to_string(),
             content: message.clone(),
             tool_calls: None,
+            tool_call_id: None,
         });
 
         // 4. LLM handles everything via MCP tools - no manual routing!

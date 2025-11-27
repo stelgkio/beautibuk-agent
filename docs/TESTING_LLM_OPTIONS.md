@@ -207,6 +207,7 @@ impl LlmConfig {
         {
             "google" => LlmProvider::Google,
             "groq" => LlmProvider::Groq,
+            "deepseek" => LlmProvider::DeepSeek,
             _ => LlmProvider::Groq, // Default to Groq
         };
 
@@ -218,6 +219,9 @@ impl LlmConfig {
             LlmProvider::Groq => std::env::var("GROQ_API_KEY")
                 .or_else(|_| std::env::var("GROQ_KEY"))
                 .ok(),
+            LlmProvider::DeepSeek => std::env::var("DEEPSEEK_API_KEY")
+                .or_else(|_| std::env::var("DEEPSEEK_KEY"))
+                .ok(),
         };
 
         Ok(LlmConfig {
@@ -227,6 +231,7 @@ impl LlmConfig {
                 .unwrap_or_else(|_| match provider {
                     LlmProvider::Groq => "llama-3.1-8b-instant".to_string(),
                     LlmProvider::Google => "gemini-2.0-flash-exp".to_string(),
+                    LlmProvider::DeepSeek => "deepseek-chat".to_string(),
                 }),
             base_url: None, // Not needed for Groq/Google
             temperature: std::env::var("LLM_TEMPERATURE")

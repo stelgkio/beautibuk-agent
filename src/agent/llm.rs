@@ -3,12 +3,13 @@ use crate::models::ChatMessage;
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[derive(Debug, Clone)]
 pub enum LlmProvider {
     Groq,
     Google,
+    DeepSeek,
 }
 
 pub struct LlmClient {
@@ -59,6 +60,10 @@ impl LlmClient {
                 self.call_google_with_functions(messages, &functions, mcp_client)
                     .await
             }
+            LlmProvider::DeepSeek => {
+                self.call_deepseek_with_functions(messages, &functions, mcp_client)
+                    .await
+            }
         }
     }
 
@@ -87,14 +92,44 @@ impl LlmClient {
         let mut current_messages = messages.to_vec();
 
         loop {
-            let request = json!({
-                "model": self.model,
-                "messages": current_messages.iter().map(|m| {
-                    json!({
+            let messages_payload: Vec<Value> = current_messages
+                .iter()
+                .map(|m| {
+                    let mut msg = json!({
                         "role": m.role,
                         "content": m.content
-                    })
-                }).collect::<Vec<_>>(),
+                    });
+
+                    if let Some(tool_calls) = &m.tool_calls {
+                        msg["tool_calls"] = Value::Array(
+                            tool_calls
+                                .iter()
+                                .map(|tc| {
+                                    json!({
+                                        "id": tc.id,
+                                        "type": tc.r#type,
+                                        "function": {
+                                            "name": tc.function.name,
+                                            "arguments": serde_json::to_string(&tc.function.arguments)
+                                                .unwrap_or_else(|_| "{}".to_string())
+                                        }
+                                    })
+                                })
+                                .collect(),
+                        );
+                    }
+
+                    if let Some(tool_call_id) = &m.tool_call_id {
+                        msg["tool_call_id"] = Value::String(tool_call_id.clone());
+                    }
+
+                    msg
+                })
+                .collect();
+
+            let request = json!({
+                "model": self.model,
+                "messages": messages_payload,
                 "tools": functions,
                 "tool_choice": "auto",
                 "temperature": self.temperature,
@@ -168,6 +203,7 @@ impl LlmClient {
                                 })
                                 .collect(),
                         ),
+                        tool_call_id: None,
                     });
 
                     // Execute each tool call
@@ -184,6 +220,7 @@ impl LlmClient {
                             role: "tool".to_string(),
                             content: tool_result,
                             tool_calls: None,
+                            tool_call_id: Some(tool_call.id.clone()),
                         });
                     }
                     // Continue loop to process tool results
@@ -192,6 +229,150 @@ impl LlmClient {
             }
 
             // No tool calls, return the response
+            return Ok(message.content.clone().unwrap_or_default());
+        }
+    }
+
+    async fn call_deepseek_with_functions(
+        &self,
+        messages: &[ChatMessage],
+        functions: &[serde_json::Value],
+        mcp_client: &McpClient,
+    ) -> Result<String> {
+        let mut current_messages = messages.to_vec();
+
+        loop {
+            let messages_payload: Vec<Value> = current_messages
+                .iter()
+                .map(|m| {
+                    let mut msg = json!({
+                        "role": m.role,
+                        "content": m.content
+                    });
+
+                    if let Some(tool_calls) = &m.tool_calls {
+                        msg["tool_calls"] = Value::Array(
+                            tool_calls
+                                .iter()
+                                .map(|tc| {
+                                    json!({
+                                        "id": tc.id,
+                                        "type": tc.r#type,
+                                        "function": {
+                                            "name": tc.function.name,
+                                            "arguments": serde_json::to_string(&tc.function.arguments)
+                                                .unwrap_or_else(|_| "{}".to_string())
+                                        }
+                                    })
+                                })
+                                .collect(),
+                        );
+                    }
+
+                    if let Some(tool_call_id) = &m.tool_call_id {
+                        msg["tool_call_id"] = Value::String(tool_call_id.clone());
+                    }
+
+                    msg
+                })
+                .collect();
+
+            let request = json!({
+                "model": self.model,
+                "messages": messages_payload,
+                "tools": functions,
+                "tool_choice": "auto",
+                "temperature": self.temperature,
+                "max_tokens": self.max_tokens,
+            });
+
+            let response = self
+                .client
+                .post("https://api.deepseek.com/chat/completions")
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .header("Content-Type", "application/json")
+                .json(&request)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let error_text = response.text().await?;
+                return Err(anyhow!("DeepSeek API error: {}", error_text));
+            }
+
+            #[derive(Deserialize)]
+            struct DeepSeekResponse {
+                choices: Vec<DeepSeekChoice>,
+            }
+
+            #[derive(Deserialize)]
+            struct DeepSeekChoice {
+                message: DeepSeekMessage,
+            }
+
+            #[derive(Deserialize)]
+            struct DeepSeekMessage {
+                content: Option<String>,
+                tool_calls: Option<Vec<ToolCallResponse>>,
+            }
+
+            #[derive(Deserialize)]
+            struct ToolCallResponse {
+                id: String,
+                r#type: String,
+                function: FunctionCallResponse,
+            }
+
+            #[derive(Deserialize)]
+            struct FunctionCallResponse {
+                name: String,
+                arguments: String,
+            }
+
+            let result: DeepSeekResponse = response.json().await?;
+            let message = &result.choices[0].message;
+
+            if let Some(tool_calls) = &message.tool_calls {
+                if !tool_calls.is_empty() {
+                    current_messages.push(ChatMessage {
+                        role: "assistant".to_string(),
+                        content: message.content.clone().unwrap_or_default(),
+                        tool_calls: Some(
+                            tool_calls
+                                .iter()
+                                .map(|tc| crate::models::ToolCall {
+                                    id: tc.id.clone(),
+                                    r#type: tc.r#type.clone(),
+                                    function: crate::models::FunctionCall {
+                                        name: tc.function.name.clone(),
+                                        arguments: serde_json::from_str(&tc.function.arguments)
+                                            .unwrap_or_default(),
+                                    },
+                                })
+                                .collect(),
+                        ),
+                        tool_call_id: None,
+                    });
+
+                    for tool_call in tool_calls {
+                        let arguments: serde_json::Value =
+                            serde_json::from_str(&tool_call.function.arguments).unwrap_or_default();
+
+                        let tool_result = mcp_client
+                            .call_tool(&tool_call.function.name, &arguments)
+                            .await?;
+
+                        current_messages.push(ChatMessage {
+                            role: "tool".to_string(),
+                            content: tool_result,
+                            tool_calls: None,
+                            tool_call_id: Some(tool_call.id.clone()),
+                        });
+                    }
+                    continue;
+                }
+            }
+
             return Ok(message.content.clone().unwrap_or_default());
         }
     }
@@ -327,6 +508,9 @@ impl LlmClient {
             LlmProvider::Google => self.generate_google_embedding(text).await,
             LlmProvider::Groq => Err(anyhow!(
                 "Groq does not support embeddings. Use Google AI Studio for embeddings."
+            )),
+            LlmProvider::DeepSeek => Err(anyhow!(
+                "DeepSeek does not currently expose embeddings. Use Google AI Studio for embeddings."
             )),
         }
     }

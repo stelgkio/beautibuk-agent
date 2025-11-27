@@ -51,6 +51,7 @@ async fn main() -> Result<()> {
     let llm_provider = match settings.llm_provider {
         LlmProvider::Groq => agent::llm::LlmProvider::Groq,
         LlmProvider::Google => agent::llm::LlmProvider::Google,
+        LlmProvider::DeepSeek => agent::llm::LlmProvider::DeepSeek,
     };
 
     let llm_client = agent::llm::LlmClient::new(
